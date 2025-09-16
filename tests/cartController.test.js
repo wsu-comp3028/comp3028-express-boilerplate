@@ -1,10 +1,14 @@
-import { test, suite, after } from 'node:test';
+import { test, suite, before, after } from 'node:test';
 import request from 'supertest';
 import assert from 'assert';
-import { app, runningServer } from '../app.js';
+import { app } from '../app.js';
 
 let sessionCookie;
+let runningServer;
 suite('Cart Controller', () => {
+    before(() => {
+        runningServer = app.listen(0); // Start server on a random available port
+    });
     test('Able to add new product to cart', async () => {
         const response = await request(app)
             .get('/cart/add/1/2')
@@ -30,7 +34,7 @@ suite('Cart Controller', () => {
     });
     after(() => {
         // Teardown
-        runningServer.close();
+        after(() => new Promise(resolve => runningServer.close(resolve)));
     })
 });
 
