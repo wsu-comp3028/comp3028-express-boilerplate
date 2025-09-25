@@ -2,6 +2,7 @@ import express from 'express';
 import debug from 'debug';
 import * as server from './config/server.js';
 import { homeRouter } from './routes/home.js';
+import authorise from './middleware/authorise.mjs';
 
 // Setup debug module to spit out all messages
 // Do `npn start` to see the debug messages
@@ -12,6 +13,7 @@ export const app = express();
 server.setup(app)
 
 // Register any middleware here
+
 
 // Register routers here
 app.use('/', homeRouter);

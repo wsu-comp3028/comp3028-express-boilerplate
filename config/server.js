@@ -3,6 +3,8 @@ import cookieParser from 'cookie-parser';
 import logger from 'morgan';
 import express from 'express';
 import path from 'path';
+import session from 'express-session';
+import 'dotenv/config';
 
 
 // Set the server port
@@ -20,6 +22,15 @@ export function setup (app) {
     app.use(express.urlencoded({ extended: false }));
     app.use(cookieParser());
     app.use(express.static(path.join(import.meta.dirname, '..', 'public')));
+    
+    app.use(session({ 
+        secret: process.env.SESSION_SECRET, 
+        saveUninitialized: false,
+        resave: true,
+        httpOnly: true,
+        cookie: { maxAge: 60000 }
+    }));
+
     
     // view engine setup
     app.set('views', path.join(import.meta.dirname, '..', 'views'));
