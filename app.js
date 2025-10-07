@@ -24,10 +24,15 @@ app.get('/test', (req, res) => {
 });
 
 // ####################################### No need to modify below this line #######################################
-// Start the server
-server.errorHandling(app);
-export const runningServer = app.listen(server.port, () => {
-  console.log(`Example app listening on port http://127.0.0.1:${server.port}`);
-  debug('testing');
-});
-
+export let runningServer;
+// Only start server if not in test mode
+// This allows supertest to run without the server already listening
+// run tests with "NODE_ENV=test node --test"
+if(process.env.NODE_ENV === 'test') {
+  codeTrace('Running in test mode - not starting server, just exporting app');
+} else {
+  // Start the server
+  runningServer = app.listen(server.port, () => {
+    console.log(`Example app listening on port http://127.0.0.1:${server.port}`);
+  });
+}
