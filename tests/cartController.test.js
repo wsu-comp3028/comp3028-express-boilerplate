@@ -32,11 +32,10 @@ suite('Cart Controller', () => {
             'Product updated message should be displayed'
         );
     });
-    after(() => {
-        // Teardown
-        // For any DB connections made
-        // new Promise(async resolve => await closeDb(resolve));
-        after(() => new Promise(resolve => runningServer.close(resolve)));
-    })
+    
+    // Teardown
+    // For any DB connections made
+    // new Promise(async resolve => await closeDb(resolve));
+    after(() => new Promise(resolve => runningServer.close(resolve)));
 });
 
