@@ -1,15 +1,10 @@
 import express from 'express';
-import debug from 'debug';
-import * as server from './config/server.js';
+import * as bootstrap from './config/bootstrap.js';
 import { homeRouter } from './routes/home.js';
 
-// Setup debug module to spit out all messages
-// Do `npn start` to see the debug messages
-export const codeTrace = debug('comp3028:server');
-
-// Start the app
+// Construct the app without starting the HTTP server.
 export const app = express();
-server.setup(app)
+bootstrap.setup(app);
 
 // Register any middleware here
 
@@ -21,11 +16,5 @@ app.get('/test', (req, res) => {
   res.send('Test');
 });
 
-// ####################################### No need to modify below this line #######################################
-// Start the server
-server.errorHandling(app);
-export const runningServer = app.listen(server.port, () => {
-  console.log(`Example app listening on port http://127.0.0.1:${server.port}`);
-  debug('testing');
-});
-
+// Register error handling after all routes.
+bootstrap.errorHandling(app);
