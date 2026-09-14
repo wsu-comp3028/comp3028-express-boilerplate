@@ -1,5 +1,4 @@
 import path from 'path';
-import sql from '../config/db.js';
 
 /**
  * Renders the index page with the specified title.
@@ -64,42 +63,21 @@ export async function uploadFile(req, res, next) {
     let msg = "No file uploaded";
     if (req.files) {
         msg = `File uploaded successfully: ${req.files.file.name}`;
-        req.files.file.mv(
-            path.join(import.meta.dirname, '../public/uploads', req.files.file.name),
-            (err) => {
-                return res.status(500).send(err);
-            }
+        await req.files.file.mv(
+            path.join(import.meta.dirname, '../public/uploads', path.basename(req.files.file.name))
         );
     }
     res.render('fileUpload', {msg: msg});
 }
 
-export async function user (req, res, next) {
+export async function user(req, res, next) {
     try {
-        
-
-        let singleUser = true;
-        if(!req.params.id) {
-            singleUser = false;
-        }
-
-        const idFunc = insertedID => sql`where id = ${ insertedID }`;
         const id = req.params.id;
-        
-        const result = await sql`select * from users 
-        ${
-            singleUser
-              ? idFunc(id)
-              : sql``
-          }
-        `
-        // if true statement will be
-        // select * from users where id = 3
-        // else 
-        // select * from users
-        res.render('user', {users: result});
+        const result = id === undefined
+            ? await req.db.query('SELECT * FROM users ORDER BY id')
+            : await req.db.query('SELECT * FROM users WHERE id = $1', [id]);
+        res.render('user', { users: result.rows });
     } catch (error) {
-        res.status(500).send(`DB error: ${error}`);
+        next(error);
     }
 }
-

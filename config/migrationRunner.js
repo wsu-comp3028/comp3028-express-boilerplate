@@ -1,88 +1,39 @@
-// migrationRunner.js
+import { readdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { initializeDb, closeDb } from './db.js';
 
-import fs from 'fs';
-import path from 'path';
-import postgres from 'postgres';
-
-// Database connection configuration
-const sql = postgres({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'postgres',
-  password: 'postgres',
-  port: 5432,
-});
-
-// Get the directory name for the migrations folder
 const migrationsDir = path.join(import.meta.dirname, '../migrations');
+const command = process.argv[2];
 
-async function applyMigrations() {
-  try {
-    // Get all SQL files in the migrations directory
-    const files = fs.readdirSync(migrationsDir).filter(file => file.endsWith('.sql'));
-
-    // Sort files by name to ensure they are applied in the correct order
-    files.sort();
-
-    for (const file of files) {
-      const filePath = path.join(migrationsDir, file);
-      const sqlQuery = fs.readFileSync(filePath, 'utf8');
-
-      console.log(`Applying migration: ${file}`);
-      await sql.unsafe(sqlQuery);
-      console.log(`Migration ${file} applied successfully.`);
-    }
-
-    console.log('All migrations applied successfully.');
-  } catch (err) {
-    console.error('Error applying migrations:', err);
-  } finally {
-    await sql.end();
-  }
-}
-
-async function dropDatabase() {
-    try {
-      console.log('Dropping all tables...');
-      
-      // Get a list of all tables in the database
-      const tables = await sql`
-        SELECT table_name
-        FROM information_schema.tables
-        WHERE table_schema = 'public'
-        AND table_type = 'BASE TABLE';
-      `;
-  
-      // Drop each table
-      for (const table of tables) {
-        await sql.unsafe(`DROP TABLE IF EXISTS ${table.table_name} CASCADE;`);
-        console.log(`Dropped table: ${table.table_name}`);
-      }
-  
-      console.log('All tables dropped successfully.');
-    } catch (err) {
-      console.error('Error dropping tables:', err);
-    } finally {
-      await sql.end();
-    }
-  }
-  
-// Handle command-line arguments
-const args = process.argv.slice(2);
-
-if (args.length === 0) {
-  console.log('Please provide a command: migrate or drop');
-  process.exit(1);
-}
-
-const command = args[0];
-
-if (command === 'migrate') {
-  applyMigrations();
-} else if (command === 'destroy') {
-  dropDatabase();
+if (!['migrate', 'drop', 'destroy'].includes(command)) {
+    console.error('Usage: npm run db:migrate or npm run db:drop (destroy is an alias for drop).');
+    process.exitCode = 1;
 } else {
-  console.log('Invalid command. Use "migrate" to apply migrations or "drop" to drop all tables.');
-  process.exit(1);
+    const db = initializeDb();
+    try {
+        if (command === 'migrate') {
+            const files = (await readdir(migrationsDir)).filter(file => file.endsWith('.sql')).sort();
+            for (const file of files) {
+                console.log(`Applying migration: ${file}`);
+                await db.query(await readFile(path.join(migrationsDir, file), 'utf8'));
+            }
+            console.log('All migrations applied successfully.');
+        } else {
+            const { rows } = await db.query(`
+                SELECT table_name FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+            `);
+            for (const { table_name } of rows) {
+                // Identifiers cannot use $1 parameters. Escape embedded double quotes.
+                const identifier = '"' + table_name.replaceAll('"', '""') + '"';
+                await db.query(`DROP TABLE IF EXISTS public.${identifier} CASCADE`);
+                console.log(`Dropped table: ${table_name}`);
+            }
+        }
+    } catch (error) {
+        console.error('Database command failed:', error);
+        process.exitCode = 1;
+    } finally {
+        await closeDb();
+    }
 }
-

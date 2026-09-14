@@ -17,7 +17,7 @@ export const port = configuredPort;
 
 /**
  * Set up the server with boilerplate middleware
- * 
+ *
  * @param {Object} app - The Express application object.
  */
 export function setup (app) {
@@ -39,7 +39,7 @@ export function setup (app) {
         dotfiles: 'ignore',
     }));
 
-    app.use(fileUpload());
+    app.use(fileUpload({ createParentPath: true }));
 
     // view engine setup
     app.set('views', path.join(import.meta.dirname, '..', 'views'));
@@ -48,7 +48,7 @@ export function setup (app) {
 
 /**
  * Handles error for the application.
- * 
+ *
  * @param {Object} app - The Express app object.
  */
 export function errorHandling(app) {
@@ -57,7 +57,7 @@ export function errorHandling(app) {
         next(createError(404));
     });
 
-    // Default Error handler 
+    // Default Error handler
     app.use((err, req, res, next) => {
         const status = err.status || 500;
         const isDevelopment = req.app.get('env') === 'development';
@@ -68,7 +68,7 @@ export function errorHandling(app) {
             : err.message;
         res.locals.status = status;
         res.locals.error = isDevelopment ? err : null;
-    
+
         // Render the error page
         res.status(status);
         res.render('error', { title: 'Error' });
