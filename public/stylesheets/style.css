@@ -6,3 +6,29 @@ body {
 a {
   color: #00B7FF;
 }
+
+.error-page {
+  background-color: #f8f8f8;
+  color: #333;
+  font-family: Arial, sans-serif;
+}
+
+.error-page h1 {
+  color: #c00;
+  font-size: 50px;
+}
+
+.error-page p {
+  font-size: 20px;
+}
+
+.error-details {
+  color: #666;
+  font-size: 16px;
+  margin-top: 20px;
+}
+
+.error-page pre {
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
