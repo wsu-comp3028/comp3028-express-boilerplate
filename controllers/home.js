@@ -27,23 +27,26 @@ export async function index(req, res, next) {
  * @throws Will render the login view with an error message on authentication failure or unexpected errors.
  */
 export async function login(req, res, next) {
-    const { username, password } = req.body;
+    const { username, password } = req.body ?? {};
     if (req.method !== 'POST' || !username || !password) {
         req.session.destroy();
-        return res.render('login', { message: '' });
+        return res.render('login', { message: '', action: '/login' });
     }
     try {
         const userService = new UserService();
         const user = await userService.validUserCredentials(username, password);
         if (user) {
             req.session.user = { id: user.id, username: user.username, role: user.role };
-            res.redirect(302, '/dashboard');
+            req.session.save((err) => {
+                if (err) return next(err);
+                res.redirect(302, '/dashboard');
+            });
         } else {
             throw new Error('Authentication: Invalid credentials');
         }
     } catch (err) {
         console.error(err);
-        return res.render('login', { message: 'Invalid username or password' });
+        return res.render('login', { message: 'Invalid username or password', action: '/login' });
     }
 }
 
@@ -51,7 +54,7 @@ export async function login(req, res, next) {
  * Handle login requests by validating credentials and issuing a JWT cookie.
  *
  * - If the request is not a POST or missing username/password, clears the 'token' cookie and renders the login page.
- * - If credentials are valid, sets a signed httpOnly 'token' cookie (short expiry) and redirects to /dashboard.
+ * - If credentials are valid, sets a signed httpOnly 'token' cookie (short expiry) and redirects to /checktoken.
  * - On invalid credentials or other errors, renders the login page with an error message.
  *
  * @param {import('express').Request} req - Express request object.
@@ -60,30 +63,34 @@ export async function login(req, res, next) {
  * @returns {Promise<void>} Resolves after sending a response (render or redirect).
  */
 export async function loginjwt(req, res, next) {
-    const { username, password } = req.body;
+    const { username, password } = req.body ?? {};
     if (req.method !== 'POST' || !username || !password) {
         res.clearCookie('token'); // Not bullet proof, but good enough for this example
-        return res.render('login', { message: '' });
+        return res.render('login', { message: '', action: '/login/jwt' });
     }
     try {
         const userService = new UserService();
         const user = await userService.validUserCredentials(username, password);
         if (user) {
-            res.cookie('token', jwt.sign({
+            const tokenUser = {
                 id: user.id,
                 username: user.username,
                 role: user.role
-            },
-                process.env.JWT_SECRET
-            ),
-                { httpOnly: true, expiresIn: '2m' });
-            res.redirect(302, '/dashboard');
+            };
+            const token = jwt.sign({ user: tokenUser }, process.env.JWT_SECRET, { expiresIn: '2m' });
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 120000,
+            });
+            res.redirect(302, '/checktoken');
         } else {
             throw new Error('Authentication: Invalid credentials');
         }
     } catch (err) {
         console.error(err);
-        return res.render('login', { message: 'Invalid username or password' });
+        return res.render('login', { message: 'Invalid username or password', action: '/login/jwt' });
     }
 }
 
@@ -96,8 +103,12 @@ export async function loginjwt(req, res, next) {
  * @returns {Promise<void>} Resolves after attempting to destroy the session and issuing a redirect.
  */
 export async function logout(req, res, next) {
-    req.session.destroy();
-    res.redirect('/');
+    req.session.destroy((err) => {
+        if (err) return next(err);
+        res.clearCookie('connect.sid');
+        res.clearCookie('token');
+        res.redirect('/');
+    });
 }
 
 
@@ -105,13 +116,13 @@ export async function logout(req, res, next) {
  * Render the dashboard view with the username from the session.
  *
  * @async
- * @param {import('express').Request} req - Express request object (expects req.session.username).
+ * @param {import('express').Request} req - Express request object (expects req.session.user.username).
  * @param {import('express').Response} res - Express response object used to render the template.
  * @param {import('express').NextFunction} next - Next middleware for error propagation.
  * @returns {Promise<void>} Resolves after rendering or forwards errors via next.
  */
 export async function dashboard(req, res, next) {
-    res.render('dashboard', { user: req.session.username });
+    res.render('dashboard', { user: req.session.user.username });
 }
 
 
@@ -150,7 +161,8 @@ export async function createToken(req, res, next) {
     res.cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
+        sameSite: 'strict',
+        maxAge: 120000,
     });
     res.send('Token created');
 }
@@ -168,7 +180,7 @@ export async function checkToken(req, res, next) {
     const token = req.cookies.token;
     try {
         if (!token) throw new Error('No Token Found');
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
         req.user = decoded.user;
         res.send(`Token is valid. User: ${req.user.username}`);
     } catch (err) {
@@ -176,7 +188,6 @@ export async function checkToken(req, res, next) {
         res.status(401).send('Unauthorised access');
     }
 }
-
 
 
 

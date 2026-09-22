@@ -4,41 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= title %></title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 50px;
-      background-color: #f8f8f8;
-      color: #333;
-    }
-    h1 {
-      font-size: 50px;
-      color: #ff0000;
-    }
-    p {
-      font-size: 20px;
-    }
-    .error-details {
-      margin-top: 20px;
-      font-size: 16px;
-      color: #888;
-    }
-    a {
-      text-decoration: none;
-      color: #007bff;
-    }
-    a:hover {
-      text-decoration: underline;
-    }
-  </style>
+  <link rel="stylesheet" href="/stylesheets/style.css">
 </head>
-<body>
+<body class="error-page">
   <h1>⚠️ <%= message %></h1>
   <p>Oops! It looks like something went wrong.</p>
   <div class="error-details">
-    <p>Status Code: <%= error.status %> - <%= error.message %></p>
+    <p>Status Code: <%= status %></p>
   </div>
+  <% if (error) { %>
   <p>Stack:</p>
   <pre><%= error.stack %></pre>
+  <% } %>
 </body>
 </html>
