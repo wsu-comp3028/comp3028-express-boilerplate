@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { after, before, mock, test } from 'node:test';
-import bcrypt from 'bcrypt';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import UserService from '../services/userService.js';
@@ -18,8 +17,8 @@ let server;
 let baseUrl;
 
 before(async () => {
-    // Keep the real credential validation and bcrypt comparison, using known test users.
-    const password = await bcrypt.hash('fixture-password', 4);
+    // Keep the real scrypt credential validation, using known test users.
+    const password = await UserService.hashPassword('fixture-password');
     mock.method(UserService.prototype, 'getUser', async (username) => {
         if (!['admin', 'user'].includes(username)) throw new Error('Unknown test user');
         return { id: username === 'admin' ? 1 : 2, username, role: username, password };

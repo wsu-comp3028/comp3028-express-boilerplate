@@ -34,9 +34,21 @@ The start command loads `.env` using Node's native environment-file support. Exi
 - `server.js` starts the HTTP server and reports startup errors.
 - `config/bootstrap.js` sets up security headers, logging, body parsing, static files, cookies, sessions, and EJS. Error handling is registered after the routes.
 - `routes/home.js`, `controllers/home.js`, and `middleware/authorise.mjs` provide the authentication examples and access checks.
-- `services/userService.js` provides mock `admin` and `user` accounts with bcrypt password hashes. Use the password associated with those teaching examples, or replace the mock hashes with hashes for a password you choose.
+- `services/userService.js` provides mock `admin` and `user` accounts. Both use the demo password `demo-password`, stored as scrypt hashes with separate random salts.
 
 Import `{ app }` from `app.js` in tests. The `runningServer` and `codeTrace` exports now belong to `server.js`; importing that file starts the listener.
+
+Password hashing uses asynchronous `scrypt` from Node's built-in `node:crypto` module. The stored format is `scrypt$<salt in hex>$<hash in hex>`, with a 16-byte salt and a 64-byte derived key. All hashes use `N=32768`, `r=8`, `p=3`, and a 64 MiB memory limit. Verification compares the derived keys with `timingSafeEqual`.
+
+To generate a replacement mock password hash:
+
+```js
+import UserService from './services/userService.js';
+
+console.log(await UserService.hashPassword('your-demo-password'));
+```
+
+Copy the result into the mock user's `password` field. Existing hashes from another algorithm must be replaced using the plaintext demo password; changing algorithms does not convert an existing hash.
 
 ## Authentication examples
 
@@ -60,6 +72,6 @@ This is a teaching application: it uses mock users and the default in-memory ses
 npm test
 ```
 
-The tests use Node's built-in test runner and open temporary localhost listeners. They provide their own secrets and credential fixtures, exercising real bcrypt comparisons, session cookies, role checks, and JWT signing/verification without requiring your `.env` or changing the mock account hashes.
+The tests use Node's built-in test runner and open temporary localhost listeners. They provide their own secrets and credential fixtures, exercising real scrypt comparisons, session cookies, role checks, and JWT signing/verification without requiring your `.env` or changing the mock account hashes. User-service tests also verify the documented demo credentials and malformed-hash handling.
 
 Coverage includes bodyless login requests under Express 5, startup with `.env`, port errors, importing the app without a listener, logout, token expiry, static files, request-size limits, and development/production error rendering.

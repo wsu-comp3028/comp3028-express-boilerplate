@@ -12,7 +12,6 @@
     "test": "node --test"
   },
   "dependencies": {
-    "bcrypt": "^6.0.0",
     "cookie-parser": "~1.4.4",
     "debug": "^4.4.3",
     "ejs": "^6.0.1",
