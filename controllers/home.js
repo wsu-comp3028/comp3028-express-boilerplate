@@ -39,7 +39,11 @@ export async function login(req, res, next) {
             req.session.user = { id: user.id, username: user.username, role: user.role };
             req.session.save((err) => {
                 if (err) return next(err);
-                res.redirect(302, '/dashboard');
+                if(req.session.user.role === 'admin') {
+                    res.redirect(302, '/dashboard');
+                } else {
+                    res.redirect(302, '/test');
+                }
             });
         } else {
             throw new Error('Authentication: Invalid credentials');
